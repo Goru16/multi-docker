@@ -1,0 +1,28 @@
+name: Deploy multi-docker
+on:
+  push:
+    branches:
+      - master
+ 
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+      - run: docker build -t goru16/react-test -f ./client/Dockerfile.dev ./client
+      - run: docker run -e CI=true goru16/react-test npm test -- --coverage
+      - run: docker build -t goru16/multi-client ./client
+      - run: docker build -t goru16/multi-nginx ./nginx
+      - run: docker build -t goru16/multi-server ./server
+      - run: docker build -t goru16/multi-worker ./worker
+      
+      # Take those images and push them to docker hub
+      - run: docker push goru16/multi-client
+      - run: docker push goru16/multi-nginx
+      - run: docker push goru16/multi-server
+      - run: docker push goru16/multi-worker 
+      
+      - name: Generate deployment package
+        run: zip -r deploy.zip . -x '*.git*'
+ 
